@@ -1,2 +1,2 @@
 const mvcServer = require('./index')
-mvcServer.runServer()
+mvcServer.runServer(8888)

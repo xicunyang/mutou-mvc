@@ -158,13 +158,14 @@ Shotenjin.templateCatch = {}
 // 在模板中引用模板使用  {# ../layout.html #}
 Shotenjin.getTemplateStr = (filename) => {
     let t = ''
-    // 这里使用同步读取
-    if(path.existSync(filename)){
-        t = fs.readFileSync(filename, 'utf-8')
-    }else{
-        throw 'View: '+filename+' not exists' 
-    }
-
+	// 这里使用同步读取
+	try{
+		fs.statSync(filename)
+	}catch(e){
+		throw 'View: '+filename+' not exists' 
+	}
+	t = fs.readFileSync(filename, 'utf-8')
+	
     t = t.replace(/\{#[\s]*([\.\/\w\-]+)[\s]*#\}/ig,(m,g1)=>{
         let fp = path.join(filename, g1.trim())
         return Shotenjin.getTemplateStr(fp)
@@ -173,10 +174,14 @@ Shotenjin.getTemplateStr = (filename) => {
 }
 
 Shotenjin.renderView = (viewPath, context) => {
-    let template = Shotenjin.templateCatch[viewPath]
+	let template = Shotenjin.templateCatch[viewPath]
+	console.log('viewPath: ',viewPath,template);
+	
     if(!template){
-        var template_str = Shotenjin.getTemplateStr(viewPath)
-        var template = new Shotenjin.Template()
+		var template_str = Shotenjin.getTemplateStr(viewPath)
+		console.log('template_str',viewPath,template_str);
+		
+        template = new Shotenjin.Template()
         template.convert(template_str)
 
         // 添加到缓存中
@@ -185,4 +190,4 @@ Shotenjin.renderView = (viewPath, context) => {
     return template.render(context)
 }
 
-global.Shotenjin = Shotenjin
+exports.Shotenjin = Shotenjin

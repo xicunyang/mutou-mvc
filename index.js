@@ -5,18 +5,23 @@ const fs = require('fs')
 const config = require('./config/config')
 const path = require('path')
 const url = require('url')
+const {Shotenjin} = require('./refLib/shotenjin')
 
 const runServer = (port = 8080) => {
+    // 创建一个server
     const server = http.createServer((req,res)=>{
+        
         let _postData = ''
         req.on('data',(chunk)=>{
-            console.log('data log...');
+            // 每次发送的数据
+            console.log('data log...',_postData);
             
             _postData += chunk
         }).on('end',()=>{
-            console.log('end log...');
+            // 数据发送完成
+            console.log('end log...',_postData);
             
-            req.post = querystring.parse(_postData)
+            req.post = querystring.parse(_postData)            
             handlerRequest(req,res)
         })
     }).listen(port)
@@ -25,12 +30,16 @@ const runServer = (port = 8080) => {
 }
 
 const handlerRequest = (req,res) => {
-    // 通过route来获取controller和action的信息
+    // url & method => {controller:'blog',action:'index',args:['1']}
     const actionInfo = route.getActionInfo(req.url,req.method)
+    console.log('actionInfo',actionInfo);
+    
     // 如果route中有匹配到的action，则分发给对应的action
     if(actionInfo.action){
+        console.log('actionInfo',actionInfo);
+        
         // 假设controller都放到当前目录的controller目录里面，还记得require是怎么搜索module的么？
-        const controller = require(`./controller/${actionInfo.controller}`) // ./controller/blog
+        const controller = require(`./controllers/${actionInfo.controller}`) // ./controller/blog
         if(controller[actionInfo.action]){
             const ct = new controllerContext(req,res)
             // 动态调用
@@ -45,20 +54,20 @@ const handlerRequest = (req,res) => {
     }
 }
 
-const controllerContext = (req,res) => {
+const controllerContext = function(req,res){
     this.req = req
     this.res = res
 
     this.handler404 = handler404
     this.handler500 = handler500
-}
 
-controllerContext.prototype.render = (viewName, context) => {
-    viewEngin.render(this.req,this.res,viewName,context)
-}
+    this.render = (viewName, context) => {
+        viewEngin.render(this.req,this.res,viewName,context)
+    }
 
-controllerContext.prototype.renderJson = (json) => {
-    viewEngin.renderJson(this.req,this.res,json)
+    this.renderJson = (json) => {
+        viewEngin.renderJson(this.res,json)
+    }
 }
 
 var handler404 = function(req, res){
@@ -73,28 +82,42 @@ var handler500 = function(req, res, err){
 
 const viewEngin = {
     render: (req,res,viewName,context) => {
-        const fileName = path.join(__dirname,'views',viewsName)
+        const fileName = path.join(__dirname,'views',viewName)
+        
         var output = Shotenjin.renderView(fileName,context)
+        
+        console.log('output',output);
+        
         res.writeHead(200,{'Content-Type':'text/html'})
         res.end(output)
     },
-    renderJson: (res,json) = {
+    renderJson: (res,jsonStr) => {
         // TODO: 转化json
+        console.log('jsonStr',jsonStr);
+        res.write(JSON.stringify(jsonStr))
+        res.end()
     } 
 }
 
 var staticFileServer = function(req, res, filePath){
+    console.log('filePath',filePath);
+
     if(!filePath){
         filePath = path.join(__dirname, config.staticFileDir, url.parse(req.url).pathname);
     }
-    path.exists(filePath, function(exists) {  
-        if(!exists) {  
+    
+    fs.stat(filePath, (err, stats) => {  
+        console.log('exists',err,stats);
+        
+        if(err) {  
             handler404(req, res);  
             return;  
         }  
   
         fs.readFile(filePath, "binary", function(err, file) {  
-            if(err) {  
+            if(err) { 
+                console.log('in 500');
+                 
                 handler500(req, res, err);
                 return;  
             }

@@ -35,12 +35,14 @@ const getActionInfo = (url, method) => {
         action: null,
         args: null,
     }
-    const method = method ? method.toLowerCase() : 'get'
+    method = method ? method.toLowerCase() : 'get'
     // url: /blog/index?path=1 则pathname为: /blog/index
     const pathName = parseUrl(url).pathname
     const m_routes = routes[method]
+    console.log('m_routes',m_routes,method);
+    
 
-    for(var i in m_routes){
+    for(let i in m_routes){
         // 正则匹配
         r.args = m_routes[i].u.exec(pathName)
         if(r.args){
